@@ -1,2 +1,5 @@
+name = "StatReth"
+[compat]
+julia = "1.4.1"
 [deps]
 DrWatson = "634d3b9d-ee7a-5ddf-bec9-22491ea816e1"
