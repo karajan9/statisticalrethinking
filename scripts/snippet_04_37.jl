@@ -107,7 +107,3 @@ mN = quap(height(dN.weight, dN.height), NelderMead())
 # %% 4.49
 post = rand(mN.distr, 20)
 post = DataFrame(post', ["a", "b", "σ"])
-
-
-
-sample(m, Prior(), 100)
