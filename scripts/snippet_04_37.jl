@@ -6,10 +6,9 @@ using DrWatson
 using CSV
 # using StatsBase
 using Distributions
-# using DataFrames
-# using Turing
+using DataFrames
+using Turing
 using Plots
-# using StatsPlots
 
 include(srcdir("quap.jl"))
 
