@@ -4,8 +4,7 @@ using DrWatson
 # %%
 using StatsBase
 using Distributions
-# using Plots
-# using StatsPlots
+using Plots
 
 # %% 3.20 - 3.23
 pdf.(Binomial(2, 0.7), 0:2)
@@ -19,75 +18,38 @@ dummy_w = rand(Binomial(2, 0.7), N)
 counts(dummy_w) ./ N |> display   # either
 countmap(dummy_w)                 # or, depending on what you want
 
-# %% 3.24
+# %% 3.24, 3.25
 dummy_w = rand(Binomial(9, 0.7), N)
 histogram(dummy_w)
 
-# %% 3.25
-w = rand(Binomial(9, 0.7), N)
+w = rand(Binomial(9, 0.6), N)
 
-
-###################################################################
-
-
-
-# %%
-n = 1_000_000
-p_grid = range(0, 1, length = n)
-prob_p = ones(n)
-prob_data = @. pdf(Binomial(9, p_grid), 6)
-posterior = prob_data .* prob_p
-posterior ./= sum(posterior)
-
-plot(p_grid, posterior)
-
-# %%
-ns = 1_000_000
-weights = pweights(posterior)
-samples = sample(p_grid, weights, ns)
-
-density(samples)
-plot!(p_grid, posterior * n)
-
-# %%
-mix1 = MixtureModel(Binomial.(9, p_grid), posterior)
-mix2 = MixtureModel(Binomial.(9, samples))
-
-rand(mix, 1_000_000) |> histogram
-rand(mix, 1_000_000) .+ 0.5 |> histogram!
-
-# %%
-@btime rand($mix2, 10000)
-
-
-rand.(Binomial.(9, samples), 1)
-
-[rand(Binomial(9, s), 1)[1] for s in samples] |> histogram
-
-
-
-
-# %%
-using Turing
-
-k = 6
-n = 9
-
-# Define the model
-
-@model globe_toss(n, k) = begin
-  theta ~ Beta(1, 1) # prior
-  k ~ Binomial(n, theta) # model
-  return k, theta
+# %% 3.26
+samples = let
+    # %% 3.2 - 3.5
+    n = 1000
+    p_grid = range(0, 1, length = n)
+    prob_p = ones(n)
+    prob_data = @. pdf(Binomial(9, p_grid), 6)
+    posterior = prob_data .* prob_p
+    posterior ./= sum(posterior)
+    weights = pweights(posterior)
+    sample(p_grid, weights, 10_000)
 end
 
-# Use Turing mcmc
+# Version 1: Imagine this as having all the binomial distributions from the p of the
+# samples added up. The random numbers are drawn from the resulting distribution.
+mix = MixtureModel(Binomial.(9, samples))
+w1 = rand(mix, 10_000)
 
-chns = sample(globe_toss(n, k), NUTS(0.65), 1000)
+# Version 2: From each p in the sample you make a binomial distribution and draw 1 value
+# from it. Then you put them all into one big array.
+w2 = rand.(Binomial.(9, samples), 1)
+w2 = vcat(w2...)
 
-# Look at the proper draws (in corrected chn2)
+# These are two different approaches but give the same result for lots of values drawn.
+# However, if you are only drawing a few values (less than samples) the first version
+# is preferrable since you can still use all the information in the samples.
 
-describe(chns) |> display
-
-# Show the hpd region
-plot(chns)
+histogram(w1, normalize = :probability, alpha = 0.6)
+histogram!(w2, normalize = :probability, alpha = 0.6)
