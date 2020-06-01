@@ -64,11 +64,17 @@ x̄ = mean(d2.weight)
     b ~ LogNormal(0, 1)
     σ ~ Uniform(0, 50)
     μ = a .+ b .* (weights .- x̄)
+
+    # This can't do the predictive posterior:
     # heights .~ Normal.(μ, σ)
-    heights ~ MvNormal(μ, σ)
+
+    # This is pretty slow but works:
     # for i ∈ eachindex(heights)
     #     heights[i] ~ Normal(μ[i], σ)
     # end
+
+    # This seems to work, fast:
+    heights ~ MvNormal(μ, σ)
 end
 
 m = height(d2.weight, d2.height)
@@ -86,10 +92,9 @@ end
 m = height(d2.weight, d2.height)
 m4_3b = quap(m, NelderMead())
 
-# %% 4.44
+# %% 4.44, 4.45
 # precis(m4_3)
 
-# %% 4.45
 round.(m4_3.vcov, digits = 3)
 
 # %% 4.46
