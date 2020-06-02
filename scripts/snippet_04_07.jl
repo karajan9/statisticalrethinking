@@ -4,7 +4,7 @@ using DrWatson
 # %%
 using StatisticalRethinking
 using CSV
-# using StatsBase
+using StatsBase
 using Distributions
 using Plots
 using StatsPlots
@@ -70,7 +70,7 @@ quantile(samples.σ, (0.1, 0.9))
 d3_height = d2.height[1:20]
 μ_grid = range(140, 160, length = 200)
 σ_grid = range(4, 20, length = 200)
-post = [(; :μ => μ, :σ => σ) for μ in μ_grid, σ in σ_grid]  # this is `post`
+post = [(μ = μ, σ = σ) for μ in μ_grid, σ in σ_grid]
 
 ll = [loglikelihood(Normal(μ, σ), d3_height) for (μ, σ) in post]
 prior = [logpdf(d_μ, μ) + logpdf(d_σ, σ) for (μ, σ) in post]
