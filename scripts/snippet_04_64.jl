@@ -87,8 +87,73 @@ plot!(weight_seq_rescaled, sim_lower, fillrange = sim_upper, alpha = 0.3, lineal
 # %% 4.72
 d = DataFrame(CSV.File(datadir("exp_raw/cherry_blossoms.csv"), missingstring = "NA"))
 
-precis(d)
+# precis(d)
 
 scatter(d.year, d.doy)
 
-# %%
+# %% 4.73
+d2 = dropmissing(d, :doy)           # either
+d2 = d[.!ismissing.(d.doy), :]      # or
+d2 = d[d.doy .!== missing, :]       # or
+
+num_knots = 15
+knot_list = quantile(d2.year, range(0, 1, length = num_knots))
+
+# %% 4.74, 4.75
+using BSplines
+
+Bspline = BSplineBasis(4, knot_list)
+B = basismatrix(Bspline, d2.year)
+
+plot(legend = false, xlabel = "year", ylabel = "basis value")
+for y in eachcol(B)
+    plot!(d2.year, y)
+end
+plot!()
+
+# %% 4.76
+@model function spline(D, B = B)
+    α ~ Normal(100, 10)
+    w ~ filldist(Normal(0, 10), size(B, 2))
+    σ ~ Exponential(1)
+    μ = α .+ B * w
+    D ~ MvNormal(μ, σ)
+    return μ
+end
+
+m4_6 = quap(spline(d2.doy))
+
+# %% 4.77
+w_str = "w" .* string.(1:17)
+post = DataFrame(rand(m4_6.distr, 1000)', ["α"; w_str; "σ"])
+
+w = mean.(eachcol(post[:, w_str]))              # either
+w = [mean(post[:, col]) for col in w_str]       # or
+
+plot(legend = false, xlabel = "year", ylabel = "basis * weight")
+for y in eachcol(B .* w')
+    plot!(d2.year, y)
+end
+plot!()
+
+# %% 4.78
+mu = post.α' .+ B * Array(post[!, w_str])'
+
+mu_m = mean.(eachrow(mu))
+mu_lower = quantile.(eachrow(mu), 0.055)
+mu_upper = quantile.(eachrow(mu), 0.945)
+
+scatter(d2.year, d2.doy, alpha = 0.3)
+plot!(d2.year, mu_m, ribbon = (mu_m .- mu_lower, mu_upper .- mu_m))
+
+# %% 4.79
+@model function spline(D, B = B)
+    α ~ Normal(100, 10)
+    w ~ filldist(Normal(0, 10), size(B, 2))
+    σ ~ Exponential(1)
+    μ = [α + sum(Brow .* w) for Brow in eachrow(B)]
+    D ~ MvNormal(μ, σ)
+    return μ
+end
+
+m4_6 = quap(spline(d2.doy))
