@@ -59,7 +59,7 @@ samples = sample(p_grid, pweights(posterior), 10_000)
 # %% 3.12, 3.13
 quantile(samples, (0.25, 0.75))
 
-chn = MCMCChains.Chains(reshape(samples, length(samples), 1, 1))
+chn = Chains(samples)
 hpd(chn; alpha = 0.5)
 
 # %% 3.14, 3.16, TODO: not sure about 3.15

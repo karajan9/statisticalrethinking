@@ -41,7 +41,7 @@ end
 
 quantile(samples, (0.2, 0.8))
 
-chn = MCMCChains.Chains(reshape(samples, ns, 1, 1), ["no_water"])
+chn = Chains(samples, ["no_water"])
 hpd(chn; alpha = 0.66)
 
 quantile(samples, ((1-0.66)/2, 1 - (1-0.66)/2))

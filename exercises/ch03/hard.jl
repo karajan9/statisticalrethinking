@@ -42,7 +42,7 @@ density!(samples)
 
 # %%
 using Turing
-chn = MCMCChains.Chains(reshape(samples, N, 1, 1), ["boys"])
+chn = Chains(samples, ["boys"])
 hpd(chn; alpha = 0.5)
 hpd(chn; alpha = 1-0.89)
 hpd(chn; alpha = 1-0.97)

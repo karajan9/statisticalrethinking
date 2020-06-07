@@ -28,7 +28,7 @@ plot!(p_grid, posterior * n)
 
 # %%
 using Turing
-chn = MCMCChains.Chains(reshape(samples, ns, 1, 1), ["waters"])
+chn = Chains(samples, ["waters"])
 hpd(chn; alpha = 0.1)
 
 mix = MixtureModel(Binomial.(15, samples))
