@@ -11,6 +11,7 @@ using Plots
 using Statistics
 
 include(srcdir("quap.jl"))
+include(srcdir("tools.jl"))
 
 # %% 4.64
 d = DataFrame(CSV.File(datadir("exp_raw/Howell_1.csv")))
@@ -39,12 +40,8 @@ post = DataFrame(rand(m4_5.distr, 1_000)', ["a", "b1", "b2", "σ"])
 mu = f_parabola.(weight_seq, post.a', post.b1', post.b2')
 sim = rand.(Normal.(mu, post.σ'))
 
-mu_m = mean.(eachrow(mu))
-mu_lower = quantile.(eachrow(mu), 0.055)
-mu_upper = quantile.(eachrow(mu), 0.945)
-sim_m = mean.(eachrow(sim))
-sim_lower = quantile.(eachrow(sim), 0.055)
-sim_upper = quantile.(eachrow(sim), 0.945)
+mu_m, mu_lower, mu_upper = meanlowerupper(mu)
+sim_m, sim_lower, sim_upper = meanlowerupper(sim)
 
 # %% 4.68
 scatter(d.weight_s, d.height, ms = 3, alpha = 0.7, legend = false)
@@ -72,12 +69,8 @@ post = DataFrame(rand(m4_6.distr, 1_000)', ["a", "b1", "b2", "b3", "σ"])
 mu = f_cube.(weight_seq, post.a', post.b1', post.b2', post.b3')
 sim = rand.(Normal.(mu, post.σ'))
 
-mu_m = mean.(eachrow(mu))
-mu_lower = quantile.(eachrow(mu), 0.055)
-mu_upper = quantile.(eachrow(mu), 0.945)
-sim_m = mean.(eachrow(sim))
-sim_lower = quantile.(eachrow(sim), 0.055)
-sim_upper = quantile.(eachrow(sim), 0.945)
+mu_m, mu_lower, mu_upper = meanlowerupper(mu)
+sim_m, sim_lower, sim_upper = meanlowerupper(sim)
 
 weight_seq_rescaled = weight_seq .* std(d.weight) .+ mean(d.weight)
 scatter(d.weight, d.height, ms = 3, alpha = 0.7, legend = false)
@@ -121,6 +114,8 @@ plot!()
     return μ
 end
 
+sample(spline(d2.doy), Prior(), 1000)
+
 m4_6 = quap(spline(d2.doy))
 
 # %% 4.77
@@ -139,9 +134,7 @@ plot!()
 # %% 4.78
 mu = post.α' .+ B * Array(post[!, w_str])'
 
-mu_m = mean.(eachrow(mu))
-mu_lower = quantile.(eachrow(mu), 0.055)
-mu_upper = quantile.(eachrow(mu), 0.945)
+mu_m, mu_lower, mu_upper = meanlowerupper(mu)
 
 scatter(d2.year, d2.doy, alpha = 0.3)
 plot!(d2.year, mu_m, ribbon = (mu_m .- mu_lower, mu_upper .- mu_m))
