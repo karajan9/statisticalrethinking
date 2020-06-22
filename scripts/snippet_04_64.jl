@@ -114,13 +114,11 @@ plot!()
     return μ
 end
 
-sample(spline(d2.doy), Prior(), 1000)
-
-m4_6 = quap(spline(d2.doy))
+m4_7 = quap(spline(d2.doy))
 
 # %% 4.77
 w_str = "w" .* string.(1:17)
-post = DataFrame(rand(m4_6.distr, 1000)', ["α"; w_str; "σ"])
+post = DataFrame(rand(m4_7.distr, 1000)', ["α"; w_str; "σ"])
 
 w = mean.(eachcol(post[:, w_str]))              # either
 w = [mean(post[:, col]) for col in w_str]       # or
@@ -149,4 +147,4 @@ plot!(d2.year, mu_m, ribbon = (mu_m .- mu_lower, mu_upper .- mu_m))
     return μ
 end
 
-m4_6 = quap(spline(d2.doy))
+m4_7alt = quap(spline(d2.doy))
