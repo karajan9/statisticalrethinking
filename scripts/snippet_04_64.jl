@@ -117,7 +117,7 @@ end
 m4_7 = quap(spline(d2.doy))
 
 # %% 4.77
-w_str = "w" .* string.(1:17)
+w_str = ["w[$i]" for i in 1:length(basis)]
 post = DataFrame(rand(m4_7.distr, 1000)', ["α"; w_str; "σ"])
 
 w = mean.(eachcol(post[:, w_str]))              # either
