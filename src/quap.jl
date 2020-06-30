@@ -35,5 +35,12 @@ function quap(model::Turing.Model, args...; kwargs...)
         MvNormal(coef, sym_var_cov_matrix)       # MvNormal expects variance matrix
     end
 
-    (coef = coef, vcov = sym_var_cov_matrix, converged = converged, distr = distr)
+    params = StatsBase.params(model)
+
+    (coef = NamedTuple{params}(coef), vcov = sym_var_cov_matrix, converged = converged,
+        distr = distr, params = params)
+end
+
+function StatsBase.params(model::Turing.Model)
+    model |> Turing.VarInfo |> Turing.tonamedtuple |> keys
 end
