@@ -10,7 +10,10 @@ function meanlowerupper(data, PI = (0.055, 0.945))
     m = mean.(eachrow(data))
     lower = quantile.(eachrow(data), PI[1])
     upper = quantile.(eachrow(data), PI[2])
-    return m, lower, upper
+    return (mean = m,
+            lower = lower,
+            upper = upper,
+            raw = data)
 end
 
 function estimparam(data, PI = (0.055, 0.945))
