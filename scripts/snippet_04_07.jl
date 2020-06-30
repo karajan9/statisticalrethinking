@@ -2,16 +2,15 @@ using DrWatson
 @quickactivate "StatReth"
 
 # %%
-using StatisticalRethinking
+using DataFrames
 using CSV
 using StatsBase
 using Distributions
-using Plots
 using StatsPlots
 
 # %% 4.7 - 4.11
-d = CSV.read(datadir("exp_raw/Howell_1.csv"), copycols = true)
-precis(d)
+d = DataFrame(CSV.File(datadir("exp_raw/Howell_1.csv")))
+# precis(d)
 d.height
 
 d2 = filter(row -> row.age >= 18, d)    # either

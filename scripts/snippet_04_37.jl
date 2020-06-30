@@ -2,16 +2,14 @@ using DrWatson
 @quickactivate "StatReth"
 
 # %%
-# using StatisticalRethinking
-using CSV
-# using StatsBase
-using Distributions
 using DataFrames
+using CSV
+using Distributions
 using Turing
-using Plots
 using StatsPlots
 
 include(srcdir("quap.jl"))
+include(srcdir("tools.jl"))
 
 # %% 4.26
 d = DataFrame(CSV.File(datadir("exp_raw/Howell_1.csv")))
@@ -55,7 +53,7 @@ end
 plot!(legend = false)
 
 # %% 4.42
-d = CSV.read(datadir("exp_raw/Howell_1.csv"), copycols = true)
+d = DataFrame(CSV.File(datadir("exp_raw/Howell_1.csv")))
 d2 = d[d.age .>= 18, :]
 x̄ = mean(d2.weight)
 
@@ -77,8 +75,8 @@ x̄ = mean(d2.weight)
     heights ~ MvNormal(μ, σ)
 end
 
-m = height(d2.weight, d2.height)
-m4_3 = quap(m, NelderMead())
+m4_3 = height(d2.weight, d2.height)
+q4_3 = quap(m4_3, NelderMead())
 
 # %% 4.43
 @model function height_log(weights, heights)
@@ -89,25 +87,23 @@ m4_3 = quap(m, NelderMead())
     heights .~ Normal.(μ, σ)
 end
 
-m = height(d2.weight, d2.height)
-m4_3b = quap(m, NelderMead())
+m4_3b = height(d2.weight, d2.height)
+q4_3b = quap(m4_3b, NelderMead())
 
 # %% 4.44, 4.45
 # precis(m4_3)
 
-round.(m4_3.vcov, digits = 3)
+round.(q4_3.vcov, digits = 3)
 
 # %% 4.46
 scatter(d2.weight, d2.height)
-post = rand(m4_3.distr, 10_000)
-post = DataFrame(post', ["a", "b", "σ"])
+post = DataFrame(rand(q4_3.distr, 10_000)', q4_3.params)
 a_map = mean(post.a)
 b_map = mean(post.b)
 plot!(x, a_map .+ b_map .* (x .- x̄))
 
 # %% 4.47
-post = rand(m4_3.distr, 10_000)
-post = DataFrame(post', ["a", "b", "σ"])
+post = DataFrame(rand(q4_3.distr, 10_000)', q4_3.params)
 post[1:5, :]
 
 # %% 4.48, 4.49
@@ -116,7 +112,7 @@ dN = d2[1:N, :]
 mN = quap(height(dN.weight, dN.height))
 
 post = rand(mN.distr, 20)
-post = DataFrame(post', ["a", "b", "σ"])
+post = DataFrame(post', mN.params)
 
 scatter(dN.weight, dN.height)
 for p in eachrow(post)
@@ -125,8 +121,8 @@ end
 plot!(legend = false, xlabel = "weight", ylabel = "height")
 
 # %% 4.50 - 4.52
-post = rand(m4_3.distr, 1_000)
-postdf = DataFrame(post', ["a", "b", "σ"])
+post = rand(q4_3.distr, 1_000)
+postdf = DataFrame(post', q4_3.params)
 mu_at_50 = postdf.a + postdf.b * (50 - x̄)
 
 density(mu_at_50)
@@ -150,43 +146,41 @@ mu_upper = quantile.(eachrow(mu), 0.945)
 scatter(d2.weight, d2.height, ms = 3)
 plot!(weight_seq, mu_m, ribbon = (mu_m .- mu_lower, mu_upper .- mu_m))
 
+# or
+
+mu = meanlowerupper(mu)
+
+scatter(d2.weight, d2.height, ms = 3)
+plot!(weight_seq, mu.mean, ribbon = (mu.mean .- mu.lower, mu.upper .- mu.mean))
+
 # %% 4.59 - 4.61
 # This isn't really pretty either. I'm not sure how to put this into a function since
 # there isn't a way to know how to create `predict_model` from `height`.
 chn = Chains(post', ["a", "b", "σ"])
 predict_model = height(weight_seq, missing)
 sim = predict(predict_model, chn) |> Array
-
-sim_m = mean.(eachcol(sim))
-sim_lower = quantile.(eachcol(sim), 0.055)
-sim_upper = quantile.(eachcol(sim), 0.945)
+sim = meanlowerupper(sim')
 
 scatter(d2.weight, d2.height, ms = 3, legend = false)
-plot!(weight_seq, mu_m, ribbon = (mu_m .- mu_lower, mu_upper .- mu_m))
-plot!(weight_seq, sim_lower, fillrange = sim_upper, alpha = 0.3, linealpha = 0.0, c = 2)
+plot!(weight_seq, mu.mean, ribbon = (mu.mean .- mu.lower, mu.upper .- mu.mean))
+plot!(weight_seq, sim.lower, fillrange = sim.upper, alpha = 0.3, linealpha = 0.0, c = 2)
 
 # %% 4.62
-sim = predict(predict_model, Chains(rand(m4_3.distr, 10_000)', ["a", "b", "σ"])) |> Array
-
-sim_m = mean.(eachcol(sim))
-sim_lower = quantile.(eachcol(sim), 0.055)
-sim_upper = quantile.(eachcol(sim), 0.945)
+sim = predict(predict_model, Chains(rand(q4_3.distr, 10_000)', ["a", "b", "σ"])) |> Array
+sim = meanlowerupper(sim')
 
 scatter(d2.weight, d2.height, ms = 3, legend = false)
-plot!(weight_seq, mu_m, ribbon = (mu_m .- mu_lower, mu_upper .- mu_m))
-plot!(weight_seq, sim_lower, fillrange = sim_upper, alpha = 0.3, linealpha = 0.0, c = 2)
+plot!(weight_seq, mu.mean, ribbon = (mu.mean .- mu.lower, mu.upper .- mu.mean))
+plot!(weight_seq, sim.lower, fillrange = sim.upper, alpha = 0.3, linealpha = 0.0, c = 2)
 
 # %% 4.63
-post = rand(m4_3.distr, 1_000)
-postdf = DataFrame(post', ["a", "b", "σ"])
+post = rand(q4_3.distr, 1_000)
+postdf = DataFrame(post', q4_3.params)
 weight_seq = 25:70
 normals = Normal.(postdf.a' .+ postdf.b' .* (weight_seq .- x̄), postdf.σ')
 sim = rand.(normals)
-
-sim_m = mean.(eachrow(sim))
-sim_lower = quantile.(eachrow(sim), 0.055)
-sim_upper = quantile.(eachrow(sim), 0.945)
+sim = meanlowerupper(sim)
 
 scatter(d2.weight, d2.height, ms = 3, legend = false)
-plot!(weight_seq, mu_m, ribbon = (mu_m .- mu_lower, mu_upper .- mu_m))
-plot!(weight_seq, sim_lower, fillrange = sim_upper, alpha = 0.3, linealpha = 0.0, c = 2)
+plot!(weight_seq, mu.mean, ribbon = (mu.mean .- mu.lower, mu.upper .- mu.mean))
+plot!(weight_seq, sim.lower, fillrange = sim.upper, alpha = 0.3, linealpha = 0.0, c = 2)

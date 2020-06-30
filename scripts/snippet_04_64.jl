@@ -7,8 +7,7 @@ using CSV
 using Distributions
 using Turing
 using Plots
-# using StatsPlots
-using Statistics
+# using Statistics
 
 include(srcdir("quap.jl"))
 include(srcdir("tools.jl"))
@@ -30,23 +29,23 @@ f_parabola(weight_s, a, b1, b2) = a + b1 * weight_s + b2 * weight_s^2
     heights ~ MvNormal(μ, σ)
 end
 
-m4_5 = quap(parabola(d.weight_s, d.height), NelderMead())
+q4_5 = quap(parabola(d.weight_s, d.height), NelderMead())
 
 # precis(m4_5)
 
 # %% 4.67
 weight_seq = range(-2.2, 2, length = 30)
-post = DataFrame(rand(m4_5.distr, 1_000)', ["a", "b1", "b2", "σ"])
+post = DataFrame(rand(q4_5.distr, 1_000)', q4_5.params)
 mu = f_parabola.(weight_seq, post.a', post.b1', post.b2')
 sim = rand.(Normal.(mu, post.σ'))
 
-mu_m, mu_lower, mu_upper = meanlowerupper(mu)
-sim_m, sim_lower, sim_upper = meanlowerupper(sim)
+mu = meanlowerupper(mu)
+sim = meanlowerupper(sim)
 
 # %% 4.68
 scatter(d.weight_s, d.height, ms = 3, alpha = 0.7, legend = false)
-plot!(weight_seq, mu_m, ribbon = (mu_m .- mu_lower, mu_upper .- mu_m))
-plot!(weight_seq, sim_lower, fillrange = sim_upper, alpha = 0.3, linealpha = 0.0, c = 2)
+plot!(weight_seq, mu.mean, ribbon = (mu.mean .- mu.lower, mu.upper .- mu.mean))
+plot!(weight_seq, sim.lower, fillrange = sim.upper, alpha = 0.3, linealpha = 0.0, c = 2)
 
 # %% 4.69
 f_cube(weight_s, a, b1, b2, b3) = a + b1 * weight_s + b2 * weight_s^2 + b3 * weight_s^3
@@ -61,42 +60,37 @@ f_cube(weight_s, a, b1, b2, b3) = a + b1 * weight_s + b2 * weight_s^2 + b3 * wei
     heights ~ MvNormal(μ, σ)
 end
 
-m4_6 = quap(cube(d.weight_s, d.height), NelderMead())
+q4_6 = quap(cube(d.weight_s, d.height), NelderMead())
 
 # %% 4.70, 4.71
 weight_seq = range(-2.2, 2, length = 30)
-post = DataFrame(rand(m4_6.distr, 1_000)', ["a", "b1", "b2", "b3", "σ"])
-mu = f_cube.(weight_seq, post.a', post.b1', post.b2', post.b3')
-sim = rand.(Normal.(mu, post.σ'))
-
-mu_m, mu_lower, mu_upper = meanlowerupper(mu)
-sim_m, sim_lower, sim_upper = meanlowerupper(sim)
+post = DataFrame(rand(q4_6.distr, 1_000)', q4_6.params)
+mu = f_cube.(weight_seq, post.a', post.b1', post.b2', post.b3') |> meanlowerupper
+sim = rand.(Normal.(mu.raw, post.σ')) |> meanlowerupper
 
 weight_seq_rescaled = weight_seq .* std(d.weight) .+ mean(d.weight)
 scatter(d.weight, d.height, ms = 3, alpha = 0.7, legend = false)
-plot!(weight_seq_rescaled, mu_m, ribbon = (mu_m .- mu_lower, mu_upper .- mu_m))
-plot!(weight_seq_rescaled, sim_lower, fillrange = sim_upper, alpha = 0.3, linealpha = 0.0, c = 2)
+plot!(weight_seq_rescaled, mu.mean, ribbon = (mu.mean .- mu.lower, mu.upper .- mu.mean))
+plot!(weight_seq_rescaled, sim.lower, fillrange = sim.upper, alpha = 0.3, la = 0.0, c = 2)
 
 # %% 4.72
-d = DataFrame(CSV.File(datadir("exp_raw/cherry_blossoms.csv"), missingstring = "NA"))
+d = DataFrame!(CSV.File(datadir("exp_raw/cherry_blossoms.csv"), missingstring = "NA"))
 
 # precis(d)
 
 scatter(d.year, d.doy)
 
 # %% 4.73
-d2 = dropmissing(d, :doy)           # either
-d2 = d[.!ismissing.(d.doy), :]      # or
-d2 = d[d.doy .!== missing, :]       # or
+d2 = dropmissing(d, :doy)
 
 num_knots = 15
 knot_list = quantile(d2.year, range(0, 1, length = num_knots))
 
 # %% 4.74, 4.75
-using BSplines
+using BSplines: BSplineBasis, basismatrix
 
-Bspline = BSplineBasis(4, knot_list)
-B = basismatrix(Bspline, d2.year)
+basis = BSplineBasis(4, knot_list)
+B = basismatrix(basis, d2.year)
 
 plot(legend = false, xlabel = "year", ylabel = "basis value")
 for y in eachcol(B)
@@ -114,11 +108,11 @@ plot!()
     return μ
 end
 
-m4_7 = quap(spline(d2.doy))
+q4_7 = quap(spline(d2.doy))
 
 # %% 4.77
 w_str = ["w[$i]" for i in 1:length(basis)]
-post = DataFrame(rand(m4_7.distr, 1000)', ["α"; w_str; "σ"])
+post = DataFrame(rand(q4_7.distr, 1000)', ["α"; w_str; "σ"])
 
 w = mean.(eachcol(post[:, w_str]))              # either
 w = [mean(post[:, col]) for col in w_str]       # or
@@ -131,11 +125,10 @@ plot!()
 
 # %% 4.78
 mu = post.α' .+ B * Array(post[!, w_str])'
-
-mu_m, mu_lower, mu_upper = meanlowerupper(mu)
+mu = meanlowerupper(mu)
 
 scatter(d2.year, d2.doy, alpha = 0.3)
-plot!(d2.year, mu_m, ribbon = (mu_m .- mu_lower, mu_upper .- mu_m))
+plot!(d2.year, mu.mean, ribbon = (mu.mean .- mu.lower, mu.upper .- mu.mean))
 
 # %% 4.79
 @model function spline(D, B = B)
@@ -144,7 +137,6 @@ plot!(d2.year, mu_m, ribbon = (mu_m .- mu_lower, mu_upper .- mu_m))
     σ ~ Exponential(1)
     μ = [α + sum(Brow .* w) for Brow in eachrow(B)]
     D ~ MvNormal(μ, σ)
-    return μ
 end
 
-m4_7alt = quap(spline(d2.doy))
+q4_7alt = quap(spline(d2.doy))
