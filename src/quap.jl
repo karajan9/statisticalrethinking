@@ -36,11 +36,23 @@ function quap(model::Turing.Model, args...; kwargs...)
     end
 
     params = StatsBase.params(model)
+    params_tuple = tuple(Symbol.(params)...)
 
-    (coef = NamedTuple{params}(coef), vcov = sym_var_cov_matrix, converged = converged,
-        distr = distr, params = params)
+    (coef = NamedTuple{params_tuple}(coef), vcov = sym_var_cov_matrix, converged = converged,
+        distr = distr, params = [params...])
 end
 
 function StatsBase.params(model::Turing.Model)
-    model |> Turing.VarInfo |> Turing.tonamedtuple |> keys
+    nt = model |> Turing.VarInfo |> Turing.tonamedtuple
+    p = String[]
+    for (a, v) in nt
+        arr = a[1]
+        var = v[1]
+        if length(arr) != 1
+            append!(p, ["$var[$i]" for i in 1:length(arr)])
+        else
+            push!(p, var)
+        end
+    end
+    return p
 end
