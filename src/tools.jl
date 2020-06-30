@@ -19,3 +19,11 @@ function estimparam(data, PI = (0.055, 0.945))
     upper = quantile.(eachcol(data), PI[2])
     return m, lower, upper
 end
+
+function lin(a, b, c, x...)
+    result = @. a + b * c
+    for i in 1:2:length(x)
+        @. result += x[i] * x[i+1]
+    end
+    return result
+end
