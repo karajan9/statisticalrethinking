@@ -5,8 +5,6 @@ using DrWatson
 using DataFrames
 using CSV
 using Turing
-# using StatsBase
-# using StatsPlots
 using Plots
 
 include(srcdir("quap.jl"))
@@ -27,7 +25,7 @@ d.M = zscore(log.(d.mass))
 
 # %% 5.31, 5.32
 d.neocortex_perc
-# Already did this so it's not going to do anything here.
+# Already did this so it's not going to do anything additional here.
 dropmissing!(d, [:kcal_per_g, :neocortex_perc, :mass])
 
 # %% 5.33
@@ -39,7 +37,7 @@ dropmissing!(d, [:kcal_per_g, :neocortex_perc, :mass])
     K ~ MvNormal(μ, σ)
 end
 
-m5_5 = milk1(d.N, d.K)
+m5_5_draft = milk1(d.N, d.K)
 q5_5_draft = quap(m5_5_draft)
 
 # %% 5.34
@@ -77,7 +75,7 @@ end
 plot!()
 
 # %% 5.36
-precis(q5_5)
+DataFrame(rand(q5_5.distr, 1000)', q5_5.params) |> precis
 
 # %% 5.37
 xseq = range(minimum(d.N) - 0.15, maximum(d.N) + 0.15, length = 30)
@@ -101,4 +99,54 @@ q5_6 = quap(m5_6)
 post = DataFrame(rand(q5_6.distr, 1000)', q5_6.params)
 precis(post)
 
-# %%
+# %% 5.39
+@model function milk4(M, N, K)
+    a ~ Normal(0, 0.2)
+    bM ~ Normal(0, 0.5)
+    bN ~ Normal(0, 0.5)
+    σ ~ Exponential(1)
+    μ = lin(a, bM, M, bN, N)
+    K ~ MvNormal(μ, σ)
+end
+
+q5_7 = quap(milk4(d.M, d.N, d.K))
+post = DataFrame(rand(q5_7.distr, 1000)', q5_7.params)
+precis(post)
+
+# %% 5.40
+# TODO coefplot
+
+# %% 5.41
+xseq = range(minimum(d.M) - 0.15, maximum(d.M) + 0.15, length = 30)
+mu = lin(post.a', post.bM', xseq, post.bN', zeros(length(xseq))) |> meanlowerupper
+plot(xseq, mu.mean, ribbon = (mu.upper .- mu.mean, mu.mean .- mu.lower))
+
+# %% 5.42
+# M -> K <- N
+# M -> N
+n = 100
+M = randn(n)
+N = rand.(Normal.(M))
+K = rand.(Normal.(N .- M))
+d_sim = DataFrame((; K, N, M))
+
+# %% 5.43
+# M -> K <- N
+# N -> M
+n = 100
+N = randn(n)
+M = rand.(Normal.(N))
+K = rand.(Normal.(N .- M))
+d_sim2 = DataFrame((; K, N, M))
+
+# M -> K <- N
+# M -> U <- N
+n = 100
+U = randn(n)
+N = rand.(Normal.(U))
+M = rand.(Normal.(U))
+K = rand.(Normal.(N .- M))
+d_sim2 = DataFrame((; K, N, M))
+
+# %% 5.44
+# TODO working with DAGs
