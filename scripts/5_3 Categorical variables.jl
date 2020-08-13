@@ -11,7 +11,7 @@ include(srcdir("quap.jl"))
 include(srcdir("tools.jl"))
 
 # %% 5.45
-d = DataFrame!(CSV.File(datadir("exp_raw/Howell_1.csv")))
+d = CSV.read(datadir("exp_raw/Howell_1.csv"), DataFrame)
 
 # %% 5.46
 μ_female = rand(Normal(178, 20), 10_000)
@@ -62,9 +62,16 @@ precis(post)
 
 # TODO: plot
 
-# %%
-mu = lin(post.a', d.A, post.bAM') |> meanlowerupper
-resid = d.M .- mu.mean
+# %% 5.54
+d.house = rand(1:4, nrow(d))
 
-scatter(d.A, d.M, legend = false)
-plot!(d.A, mu.mean, ribbon = (mu.mean .- mu.lower, mu.upper .- mu.mean))
+@model function clade_house(clade_id, house, K)
+    σ ~ Exponential(1)
+    a ~ filldist(Normal(0, 0.5), length(unique(clade_id)))
+    h ~ filldist(Normal(0, 0.5), length(unique(house)))
+    μ = a[clade_id] + h[house]
+    K ~ MvNormal(μ, σ)
+end
+
+q5_10 = quap(clade_house(d.clade_id, d.house, d.K))
+DataFrame(rand(q5_10.distr, 1000)', q5_10.params) |> precis
