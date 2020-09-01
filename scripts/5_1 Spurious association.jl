@@ -12,7 +12,7 @@ include(srcdir("quap.jl"))
 include(srcdir("tools.jl"))
 
 # %% 5.1, 5.2
-d = DataFrame(CSV.File(datadir("exp_raw/WaffleDivorce.csv")))
+d = CSV.read(datadir("exp_raw/WaffleDivorce.csv"), DataFrame)
 d.D = zscore(d.Divorce)
 d.M = zscore(d.Marriage)
 d.A = zscore(d.MedianAgeMarriage)
@@ -20,6 +20,7 @@ d.A = zscore(d.MedianAgeMarriage)
 std(d.MedianAgeMarriage)
 
 # %% 5.3
+# age of marriage
 @model function divorce_A(A, D)
     a ~ Normal(0, 0.2)
     bA ~ Normal(0, 0.5)
@@ -39,6 +40,8 @@ for r in eachrow(prior)
     plot!(x, p, color = :black, alpha = 0.4)
 end
 plot!(legend = false)
+plot!(xlabel = "Observed divorce", ylabel = "Predicted divorce")
+
 
 # %% 5.5
 q5_1 = quap(m5_1)
@@ -51,6 +54,7 @@ scatter(d.A, d.D, alpha = 0.4, legend = false)
 plot!(A_seq, mu.mean, ribbon = (mu.mean .- mu.lower, mu.upper .- mu.mean))
 
 # %% 5.6
+# marriage rate
 @model function divorce_M(M, D)
     a ~ Normal(0, 0.2)
     bM ~ Normal(0, 0.5)
@@ -72,6 +76,7 @@ plot!(M_seq, mu.mean, ribbon = (mu.mean .- mu.lower, mu.upper .- mu.mean))
 missing  # TODO
 
 # %% 5.10
+# both age at and rate of marriage
 @model function divorce_A_M(A, M, D)
     a ~ Normal(0, 0.2)
     bM ~ Normal(0, 0.5)
@@ -83,6 +88,7 @@ end
 
 m5_3 = divorce_A_M(d.A, d.M, d.D)
 q5_3 = quap(m5_3)
+DataFrame(rand(q5_3.distr, 1000)', q5_3.params) |> precis
 
 # %% 5.11
 # Well, this ain't pretty. But before I have something reasonable, I at least wanted to
@@ -143,6 +149,7 @@ resid = d.M .- mu.mean
 
 scatter(d.A, d.M, legend = false)
 plot!(d.A, mu.mean, ribbon = (mu.mean .- mu.lower, mu.upper .- mu.mean))
+plot!(xlabel = "Age at marriage (std)", ylabel = "Marriage rate (std)")
 
 # %% 5.15, 5.16
 post = DataFrame(rand(q5_3.distr, 1000)', q5_3.params)
